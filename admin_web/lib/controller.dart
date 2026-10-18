@@ -6,7 +6,16 @@ import 'api.dart';
 import 'auth.dart';
 import 'models.dart';
 
-enum Section { overview, users, health, releases, audit, moderation, aiSafety }
+enum Section {
+  overview,
+  users,
+  health,
+  releases,
+  audit,
+  moderation,
+  aiSafety,
+  subscriptions,
+}
 
 enum Access {
   signedOut,
@@ -150,6 +159,7 @@ class AdminController extends ChangeNotifier {
   Future<void> select(Section value) async {
     section = value;
     await _load(switch (value) {
+      Section.subscriptions => api.subscriptions,
       Section.aiSafety => api.aiControl,
       Section.overview => api.overview,
       Section.users => () => api.users(search: usersSearch),
@@ -176,6 +186,11 @@ class AdminController extends ChangeNotifier {
   Future<void> showUser(String id) async {
     section = Section.users;
     await _load(() => api.user(id));
+  }
+
+  Future<void> showSubscription(String id, {bool team = false}) async {
+    section = Section.subscriptions;
+    await _load(() => api.subscription(id, team: team));
   }
 
   Future<void> nextAudit() async {

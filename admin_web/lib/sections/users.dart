@@ -91,6 +91,11 @@ class UserDetailView extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
+      if (data.user.id != null)
+        OutlinedButton(
+          onPressed: () => controller.showSubscription(data.user.id!),
+          child: const Text('View subscription'),
+        ),
       TextButton(
         onPressed: () => controller.select(Section.users),
         child: const Text('Back to Users'),

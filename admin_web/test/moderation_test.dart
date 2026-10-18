@@ -41,6 +41,36 @@ final report = <String, dynamic>{
   },
 };
 void main() {
+  test('Policy contexts expose bounded evidence and no fake AI target', () {
+    final content = ModerationReport({
+      ...report,
+      'context_type': 'workspace_content',
+      'entity_type': 'note',
+      'entity_id': otherId,
+      'evidence_title': 'Short title',
+    });
+    expect(content.entityType, 'note');
+    expect(content.evidenceTitle, 'Short title');
+    final ai = ModerationReport({
+      ...report,
+      'context_type': 'ai_response',
+      'target_id': null,
+      'target': null,
+      'channel': 'mobile_assistant',
+      'response_text': 'Generated question',
+    });
+    expect(ai.targetId, isNull);
+    expect(ai.responseText, 'Generated question');
+    expect(ai.channel, 'mobile_assistant');
+    expect(
+      ModerationReport({
+        ...report,
+        'response_text': 'x' * 1001,
+        'evidence_title': 'x' * 201,
+      }).responseText,
+      isNull,
+    );
+  });
   test(
     'Counter observations reject malformed values and retain only typed fields',
     () {

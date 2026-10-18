@@ -32,7 +32,7 @@ class ModerationQueueView extends StatelessWidget {
       for (final report in page.reports)
         ListTile(
           title: Text(
-            '${report.status} · ${report.reason} · ${report.targetUsername ?? report.targetId ?? 'Deleted account'}',
+            '${report.status} · ${report.reason} · ${report.contextType == 'ai_response' ? 'AI response' : report.targetUsername ?? report.targetId ?? 'Deleted account'}',
           ),
           subtitle: Text(
             '${report.createdAt} · ${report.state ?? 'Unavailable'}',
@@ -87,13 +87,21 @@ class ModerationDetailView extends StatelessWidget {
         ),
         const Text('Report detail', style: TextStyle(fontSize: 24)),
         Text('Report: ${r.id}'),
+        if (r.entityType != null)
+          Text('Entity: ${r.entityType} / ${r.entityId}'),
+        if (r.evidenceTitle != null) Text('Title evidence: ${r.evidenceTitle}'),
+        if (r.channel != null) Text('Channel: ${r.channel}'),
+        if (r.responseText != null)
+          Text('AI response evidence: ${r.responseText}'),
         Text('Status: ${r.status} · Reason: ${r.reason}'),
         Text('Created: ${r.createdAt} · Resolved: ${r.resolvedAt ?? 'Open'}'),
         Text(
           'Reporter: ${r.reporter['first_name'] ?? ''} ${r.reporter['last_name'] ?? ''} @${r.reporter['username'] ?? ''} · ${r.reporterId ?? 'Deleted account'}',
         ),
         Text(
-          'Target: ${r.target['first_name'] ?? ''} ${r.target['last_name'] ?? ''} @${r.target['username'] ?? ''} · ${r.targetId ?? 'Deleted account'}',
+          r.contextType == 'ai_response'
+              ? 'AI response: no target account'
+              : 'Target: ${r.target['first_name'] ?? ''} ${r.target['last_name'] ?? ''} @${r.target['username'] ?? ''} · ${r.targetId ?? 'Deleted account'}',
         ),
         Text(
           'Context: ${r.contextType} · Workspace: ${r.workspaceId ?? 'None'} · Invitation: ${r.invitationId ?? 'None'}',

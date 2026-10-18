@@ -19,6 +19,7 @@ enum AdminFailure {
   environment,
   unavailable,
   invalidRequest,
+  conflict,
 }
 
 class AdminException implements Exception {
@@ -27,6 +28,11 @@ class AdminException implements Exception {
 }
 
 enum _Action {
+  subscriptionsOverview('subscriptions.overview'),
+  subscriptionsGet('subscriptions.get'),
+  subscriptionsPreview('subscriptions.preview'),
+  subscriptionsApply('subscriptions.apply'),
+  releasePolicySet('release.policy.set'),
   aiControlGet('ai.control.get'),
   aiControlSet('ai.control.set'),
   overview('overview'),
@@ -63,10 +69,12 @@ class ControlApi {
   }) async {
     if (!config.valid) throw const AdminException(AdminFailure.unavailable);
     final correlation = correlationId ?? _uuid.v4();
+    final subscriptions = action.wire.startsWith('subscriptions.');
     ApiResponse response;
     try {
       response = await transport.invoke({
         'action': action.wire,
+        if (subscriptions) 'contract_version': 1,
         'correlation_id': correlation,
         'expected_environment': config.environment,
         'expected_project_url': config.projectUrl,
@@ -79,13 +87,21 @@ class ControlApi {
       throw AdminException(switch (response.status) {
         401 => AdminFailure.session,
         403 => AdminFailure.forbidden,
-        409 => AdminFailure.environment,
+        409 =>
+          object(response.body)['error'] == 'revision_conflict'
+              ? AdminFailure.conflict
+              : AdminFailure.environment,
         400 => AdminFailure.invalidRequest,
         _ => AdminFailure.unavailable,
       });
     }
     final envelope = object(response.body),
         environment = object(object(response.body)['environment']);
+    if (subscriptions &&
+        (envelope['contract_version'] is! int ||
+            envelope['contract_version'] != 1)) {
+      throw const AdminException(AdminFailure.unavailable);
+    }
     if (environment['label'] != config.environment ||
         environment['project_url'] != config.projectUrl) {
       throw const AdminException(AdminFailure.environment);
@@ -98,6 +114,53 @@ class ControlApi {
 
   Future<AiControl> aiControl() async =>
       AiControl(await _request(_Action.aiControlGet, {}));
+
+  Future<Subscriptions> subscriptions() async => Subscriptions(
+    await _request(_Action.subscriptionsOverview, {}),
+    overview: true,
+  );
+  Future<Subscriptions> subscription(String id, {bool team = false}) async {
+    if (!validUserId(id)) {
+      throw const AdminException(AdminFailure.invalidRequest);
+    }
+    return Subscriptions(
+      await _request(_Action.subscriptionsGet, {
+        team ? 'team_id' : 'user_id': id,
+      }),
+    );
+  }
+
+  Future<Json> changeSubscription({
+    required String command,
+    String? target,
+    required int revision,
+    required Json values,
+    required String reason,
+    required String correlation,
+    required bool preview,
+  }) async {
+    if (!['grant.set', 'policy.set', 'enforcement.set'].contains(command) ||
+        revision < 0 ||
+        revision > 2147483646 ||
+        reason.trim().isEmpty ||
+        reason.trim().runes.length > 500 ||
+        !validUserId(correlation) ||
+        (command == 'grant.set' ? !validUserId(target) : target != null)) {
+      throw const AdminException(AdminFailure.invalidRequest);
+    }
+    return _request(
+      preview ? _Action.subscriptionsPreview : _Action.subscriptionsApply,
+      {
+        'command': command,
+        'target_id': target,
+        'revision': revision,
+        'values': values,
+        'reason': reason.trim(),
+      },
+      correlationId: correlation,
+    );
+  }
+
   Future<Json> setAiControl(
     bool enabled,
     Map<String, int>? limits,
@@ -164,6 +227,22 @@ class ControlApi {
       SystemHealth(await _request(_Action.health, {}));
   Future<Releases> releases() async =>
       Releases(await _request(_Action.releases, {}));
+  Future<Json> setReleasePolicy(
+    ReleasePolicyData policy,
+    String reason,
+    String correlation,
+  ) async {
+    if (!validUserId(correlation) ||
+        reason.trim().isEmpty ||
+        reason.runes.length > 500) {
+      throw const AdminException(AdminFailure.invalidRequest);
+    }
+    return _request(_Action.releasePolicySet, {
+      ...policy.toMap(),
+      'reason': reason.trim(),
+    }, correlationId: correlation);
+  }
+
   Future<AuditPage> audit({AuditCursor? before, int limit = 50}) async {
     if (limit < 1 ||
         limit > 100 ||

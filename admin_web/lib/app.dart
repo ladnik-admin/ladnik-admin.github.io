@@ -1,5 +1,6 @@
 import 'sections/ai_safety.dart';
 import 'sections/moderation.dart';
+import 'sections/subscriptions.dart';
 
 import 'package:flutter/material.dart';
 
@@ -174,6 +175,7 @@ class _LoginViewState extends State<LoginView> {
 }
 
 const sectionLabels = {
+  Section.subscriptions: 'Subscriptions',
   Section.aiSafety: 'AI Safety',
   Section.overview: 'Overview',
   Section.users: 'Users',
@@ -227,12 +229,13 @@ class AdminShell extends StatelessWidget {
       };
     }
     return switch (controller.data) {
+      Subscriptions value => SubscriptionsView(value, controller),
       AiControl value => AiSafetyView(value, controller),
       Overview value => OverviewView(value),
       UserPage value => UsersView(value, controller),
       UserDetail value => UserDetailView(value, controller),
       SystemHealth value => HealthView(value),
-      Releases value => ReleasesView(value),
+      Releases value => ReleasesView(value, controller: controller),
       AuditPage value => AuditView(value, controller),
       ModerationPage value => ModerationQueueView(value, controller),
       ModerationDetail value => ModerationDetailView(value, controller),

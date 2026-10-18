@@ -62,6 +62,8 @@ ApiResponse reply(
   Object? data, [
   int status = 200,
 ]) => ApiResponse(status, {
+  if (request['action'].toString().startsWith('subscriptions.'))
+    'contract_version': 1,
   'correlation_id': request['correlation_id'],
   'environment': {
     'label': config.environment,
