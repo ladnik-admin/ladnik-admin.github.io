@@ -27,6 +27,40 @@ class Counter {
 
 sealed class AdminData {}
 
+class MaintenanceContext extends AdminData {
+  final bool available;
+  final int? revision;
+  final String? mode, expiresAt;
+  MaintenanceContext(Json raw)
+    : revision =
+          raw['revision'] is int &&
+              raw['revision'] > 0 &&
+              raw['revision'] < 9007199254740991
+          ? raw['revision'] as int
+          : null,
+      mode =
+          const [
+            'NORMAL',
+            'READ_ONLY',
+            'CRITICAL_PAUSE',
+          ].contains(raw['configuredMode'])
+          ? raw['configuredMode'] as String
+          : null,
+      expiresAt = text(raw['expiresAt']),
+      available =
+          raw['version'] == 2 &&
+          raw['available'] == true &&
+          raw['reauthRequired'] == true &&
+          raw['revision'] is int &&
+          raw['revision'] > 0 &&
+          raw['revision'] < 9007199254740991 &&
+          const [
+            'NORMAL',
+            'READ_ONLY',
+            'CRITICAL_PAUSE',
+          ].contains(raw['configuredMode']);
+}
+
 const commercialLimitNames = [
   'owned_cloud_limit',
   'owned_shared_limit',
@@ -716,4 +750,34 @@ class AiControl extends AdminData {
   static List<int?> _counts(Object? raw) =>
       raw is List ? raw.take(3).map(count).toList() : [];
   String get monetaryCost => 'UNAVAILABLE';
+}
+
+class ServiceNoticesData extends AdminData {
+  final bool available;
+  final List<Json> notices;
+  ServiceNoticesData(Json raw)
+    : available =
+          raw['version'] == 1 &&
+          raw['available'] == true &&
+          raw['pushAvailable'] == false,
+      notices = raw['version'] == 1
+          ? rows(raw['notices'], 20)
+                .map(
+                  (r) => <String, dynamic>{
+                    for (final key in [
+                      'id',
+                      'revision',
+                      'titleRu',
+                      'messageRu',
+                      'titleEn',
+                      'messageEn',
+                      'startsAt',
+                      'endsAt',
+                      'displayLimit',
+                    ])
+                      if (r.containsKey(key)) key: r[key],
+                  },
+                )
+                .toList()
+          : [];
 }

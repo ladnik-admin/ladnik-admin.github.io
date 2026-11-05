@@ -1,4 +1,6 @@
+import 'sections/service_notices.dart';
 import 'sections/ai_safety.dart';
+import 'sections/maintenance.dart';
 import 'sections/moderation.dart';
 import 'sections/subscriptions.dart';
 
@@ -175,6 +177,8 @@ class _LoginViewState extends State<LoginView> {
 }
 
 const sectionLabels = {
+  Section.serviceNotices: 'Service notices',
+  Section.maintenance: 'Maintenance',
   Section.subscriptions: 'Subscriptions',
   Section.aiSafety: 'AI Safety',
   Section.overview: 'Overview',
@@ -192,16 +196,21 @@ class AdminShell extends StatelessWidget {
   Widget navigation(BuildContext context, {bool drawer = false}) => Column(
     children: [
       const SizedBox(height: 16),
-      for (final entry in sectionLabels.entries)
-        ListTile(
-          selected: controller.section == entry.key,
-          title: Text(entry.value),
-          onTap: () {
-            if (drawer) Navigator.pop(context);
-            controller.select(entry.key);
-          },
+      Expanded(
+        child: ListView(
+          children: [
+            for (final entry in sectionLabels.entries)
+              ListTile(
+                selected: controller.section == entry.key,
+                title: Text(entry.value),
+                onTap: () {
+                  if (drawer) Navigator.pop(context);
+                  controller.select(entry.key);
+                },
+              ),
+          ],
         ),
-      const Spacer(),
+      ),
       ListTile(
         leading: const Icon(Icons.logout),
         title: const Text('Logout'),
@@ -229,6 +238,12 @@ class AdminShell extends StatelessWidget {
       };
     }
     return switch (controller.data) {
+      ServiceNoticesData value => ServiceNoticesView(
+        value,
+        controller,
+        key: ValueKey(controller.contextEpoch),
+      ),
+      MaintenanceContext value => MaintenanceView(value, controller),
       Subscriptions value => SubscriptionsView(value, controller),
       AiControl value => AiSafetyView(value, controller),
       Overview value => OverviewView(value),

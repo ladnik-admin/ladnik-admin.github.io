@@ -7,6 +7,8 @@ import 'auth.dart';
 import 'models.dart';
 
 enum Section {
+  serviceNotices,
+  maintenance,
   overview,
   users,
   health,
@@ -45,6 +47,8 @@ class AdminController extends ChangeNotifier {
   AdminController(this.auth, this.api);
   bool get signedIn => _session != null;
   String? get actorId => _session?.userId;
+  // Invalidates sensitive prepared commands on refresh, navigation and A-B-A.
+  int get contextEpoch => _generation;
   void start() {
     _subscription = auth.changes.listen(
       _changed,
@@ -159,6 +163,8 @@ class AdminController extends ChangeNotifier {
   Future<void> select(Section value) async {
     section = value;
     await _load(switch (value) {
+      Section.serviceNotices => api.serviceNotices,
+      Section.maintenance => api.maintenanceContext,
       Section.subscriptions => api.subscriptions,
       Section.aiSafety => api.aiControl,
       Section.overview => api.overview,

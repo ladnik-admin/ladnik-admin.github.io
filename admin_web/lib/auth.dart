@@ -60,7 +60,7 @@ class SupabaseAdminTransport implements AdminTransport {
       return ApiResponse(result.status, result.data);
     } on FunctionException catch (error) {
       // Never retain/render error details or provider/database messages.
-      return ApiResponse(error.status, null);
+      return safeAdminError(error.status, error.details, body);
     } catch (_) {
       return const ApiResponse(503, null);
     }
