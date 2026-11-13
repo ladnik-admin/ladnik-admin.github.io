@@ -1,2 +1,2 @@
 LADNIK Control Center
-source: Vlad-Shpilevsky/LADNIK@0ff1317b1fa06975e98bdd0ec6c2cfc9c2c9ccd1
+source: Vlad-Shpilevsky/LADNIK@b8ee88ad87f2fc58c85ed8ce34e3e43aaaf88614
