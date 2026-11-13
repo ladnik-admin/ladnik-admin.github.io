@@ -1,8 +1,16 @@
+# Template for .github/workflows/deploy-pages.yml in the PUBLIC repo
+# ladnik-admin/ladnik-admin.github.io (#392). Kept here so the private repo
+# stays the only source. It deploys the already built site/ folder; it never
+# builds source and holds no secret. Installing it is a one-time owner step
+# (docs/ADMIN_PAGES_PUBLISH.md), because a contents-only deploy token cannot
+# change workflow files.
 name: Deploy LADNIK Control Center
 
 on:
   push:
     branches: [main]
+    # The switch commit changes only this file: it must deploy too.
+    paths: ['site/**', '.github/workflows/deploy-pages.yml']
   workflow_dispatch:
 
 permissions:
@@ -15,50 +23,17 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    env:
-      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
-      SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.47.5'
-          channel: stable
-          cache: true
-
-      - name: Validate public production configuration
-        shell: bash
-        run: |
-          set -euo pipefail
-          : "${SUPABASE_URL:?Set repository variable SUPABASE_URL}"
-          : "${SUPABASE_PUBLISHABLE_KEY:?Set repository variable SUPABASE_PUBLISHABLE_KEY}"
-          test "$SUPABASE_URL" = "https://qnzagdheekhxevpqbfzj.supabase.co"
-          [[ "$SUPABASE_PUBLISHABLE_KEY" == sb_publishable_* ]]
-
-      - name: Install dependencies
-        working-directory: admin_web
-        run: flutter pub get
-
-      - name: Analyze
-        working-directory: admin_web
-        run: flutter analyze
-
-      - name: Tests
-        working-directory: admin_web
-        run: flutter test
-
-      - name: Build production web
-        working-directory: admin_web
-        run: >
-          flutter build web --release --base-href /
-          --dart-define=SUPABASE_URL="$SUPABASE_URL"
-          --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY"
-          --dart-define=LADNIK_CONTROL_ENVIRONMENT=production
+      - name: Require a built site
+        run: test -f site/index.html && test -f site/source.txt
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -66,15 +41,8 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: admin_web/build/web
+          path: site
 
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
